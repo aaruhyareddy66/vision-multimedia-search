@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vision — Multimedia Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D10;
+    --surface:#15181D;
+    --surface-2:#1B1F25;
+    --line:#262B33;
+    --text:#E8EAED;
+    --text-dim:#8A919C;
+    --signal:#00E5A0;
+    --signal-dim:#0A3B2E;
+    --amber:#F5A623;
+    --amber-dim:#3A2A0E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:920px;
+    margin:0 auto;
+    padding:56px 24px 80px;
+  }
+  .top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:8px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .brand{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:28px;
+    letter-spacing:-0.01em;
+  }
+  .brand .dot{color:var(--signal);}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--text-dim);
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+  }
+  .sub{
+    color:var(--text-dim);
+    font-size:14px;
+    margin-bottom:40px;
+  }
+
+  .dropzone{
+    position:relative;
+    border:1px dashed var(--line);
+    border-radius:4px;
+    padding:36px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+    background:var(--surface);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone.drag{
+    border-color:var(--signal);
+    background:var(--signal-dim);
+  }
+  .dz-left{display:flex;align-items:center;gap:16px;}
+  .dz-icon{
+    width:40px;height:40px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--signal);
+    flex-shrink:0;
+  }
+  .dz-title{font-weight:500;font-size:15px;}
+  .dz-file{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);margin-top:4px;}
+  .file-input{display:none;}
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:11px 20px;
+    border-radius:3px;
+    border:1px solid var(--signal);
+    background:transparent;
+    color:var(--signal);
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{background:var(--signal);color:#04140F;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-choose{border-color:var(--line);color:var(--text);}
+  .btn-choose:hover{background:var(--surface-2);color:var(--text);}
+
+  .status-line{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    margin-top:14px;
+    min-height:16px;
+    color:var(--signal);
+  }
+  .status-line.error{color:#FF6B6B;}
+
+  .search-row{
+    display:flex;
+    gap:10px;
+    margin:48px 0 8px;
+  }
+  .search-row input{
+    flex:1;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:3px;
+    color:var(--text);
+    padding:13px 14px;
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+  }
+  .search-row input:focus{outline:none;border-color:var(--signal);}
+  .search-row input::placeholder{color:var(--text-dim);}
+
+  .section-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin:44px 0 16px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .section-label::after{
+    content:'';
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:16px;
+  }
+  .card{
+    position:relative;
+    background:var(--surface);
+    border-radius:4px;
+    padding:20px;
+    min-height:140px;
+  }
+  .corner{
+    position:absolute;
+    width:14px;height:14px;
+    border-color:var(--signal);
+    opacity:0.7;
+  }
+  .corner.tl{top:6px;left:6px;border-top:2px solid;border-left:2px solid;}
+  .corner.tr{top:6px;right:6px;border-top:2px solid;border-right:2px solid;}
+  .corner.bl{bottom:6px;left:6px;border-bottom:2px solid;border-left:2px solid;}
+  .corner.br{bottom:6px;right:6px;border-bottom:2px solid;border-right:2px solid;}
+
+  .card-filename{
+    font-weight:500;
+    font-size:14px;
+    margin-bottom:14px;
+    padding-right:8px;
+    word-break:break-all;
+  }
+  .field{margin-bottom:12px;}
+  .field:last-child{margin-bottom:0;}
+  .field-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:5px;
+  }
+  .ocr-text{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    line-height:1.5;
+    color:var(--amber);
+    background:var(--amber-dim);
+    padding:8px 10px;
+    border-radius:3px;
+    max-height:90px;
+    overflow-y:auto;
+  }
+  .ocr-text.empty{color:var(--text-dim);background:transparent;padding:0;}
+
+  .tags{display:flex;flex-wrap:wrap;gap:6px;}
+  .tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--signal);
+    border:1px solid var(--signal-dim);
+    background:var(--signal-dim);
+    padding:3px 8px;
+    border-radius:2px;
+  }
+  .tags.empty{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+
+  .empty-state{
+    color:var(--text-dim);
+    font-size:13px;
+    padding:24px 0;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">VISION<span class="dot">.</span></div>
+    <div class="eyebrow">Multimedia Search System</div>
+  </div>
+  <div class="sub">Upload media — text and objects are detected automatically and become searchable.</div>
+
+  <div class="dropzone" id="dropzone">
+    <div class="dz-left">
+      <div class="dz-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 16V4M12 4l-4 4M12 4l4 4"/>
+          <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+        </svg>
+      </div>
+      <div>
+        <div class="dz-title">Drop a file or choose one to upload</div>
+        <div class="dz-file" id="fileLabel">No file selected</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <label class="btn btn-choose" for="fileInput">Choose file</label>
+      <button class="btn" id="uploadBtn" disabled>Upload</button>
+    </div>
+    <input class="file-input" type="file" id="fileInput" accept="image/*" />
+  </div>
+  <div class="status-line" id="statusLine"></div>
+
+  <div class="section-label">Search</div>
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="Search by text, tag, or filename…" />
+    <button class="btn" id="searchBtn">Search</button>
+  </div>
+
+  <div class="section-label">Results</div>
+  <div class="grid" id="results">
+    <div class="empty-state">No results yet — upload a file or run a search.</div>
+  </div>
+
+</div>
+
+<script>
+  const API_BASE = 'http://localhost:3000';
+
+  const fileInput = document.getElementById('fileInput');
+  const fileLabel = document.getElementById('fileLabel');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const statusLine = document.getElementById('statusLine');
+  const dropzone = document.getElementById('dropzone');
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const resultsEl = document.getElementById('results');
+
+  let selectedFile = null;
+
+  function setStatus(msg, isError){
+    statusLine.textContent = msg || '';
+    statusLine.classList.toggle('error', !!isError);
+  }
+
+  function setSelectedFile(file){
+    selectedFile = file;
+    fileLabel.textContent = file ? file.name : 'No file selected';
+    uploadBtn.disabled = !file;
+  }
+
+  fileInput.addEventListener('change', (e) => {
+    setSelectedFile(e.target.files[0] || null);
+    setStatus('');
+  });
+
+  ['dragenter','dragover'].forEach(evt =>
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('drag'); })
+  );
+  ['dragleave','drop'].forEach(evt =>
+    dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('drag'); })
+  );
+  dropzone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    if(file){ setSelectedFile(file); setStatus(''); }
+  });
+
+  uploadBtn.addEventListener('click', async () => {
+    if(!selectedFile) return;
+    uploadBtn.disabled = true;
+    setStatus('Uploading and processing…');
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+      if(!res.ok) throw new Error(`Server responded ${res.status}`);
+      const data = await res.json();
+      setStatus(`Indexed: ${data.metadata.filename}`);
+      setSelectedFile(null);
+      fileInput.value = '';
+      renderResults([{ ...data.metadata }]);
+    } catch(err) {
+      setStatus(`Upload failed — ${err.message}`, true);
+    } finally {
+      uploadBtn.disabled = !selectedFile;
+    }
+  });
+
+  async function runSearch(){
+    const q = searchInput.value.trim();
+    try {
+      const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(q)}`);
+      if(!res.ok) throw new Error(`Server responded ${res.status}`);
+      const data = await res.json();
+      renderResults(data);
+    } catch(err) {
+      resultsEl.innerHTML = `<div class="empty-state">Search failed — ${err.message}</div>`;
+    }
+  }
+  searchBtn.addEventListener('click', runSearch);
+  searchInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') runSearch(); });
+
+  function renderResults(items){
+    if(!items || items.length === 0){
+      resultsEl.innerHTML = `<div class="empty-state">No matches found.</div>`;
+      return;
+    }
+    resultsEl.innerHTML = items.map(item => {
+      const objects = item.objects_detected || [];
+      const ocr = (item.ocr_text || '').trim();
+      return `
+        <div class="card">
+          <div class="corner tl"></div><div class="corner tr"></div>
+          <div class="corner bl"></div><div class="corner br"></div>
+          <div class="card-filename">${escapeHtml(item.filename || 'untitled')}</div>
+          <div class="field">
+            <div class="field-label">OCR Text</div>
+            <div class="ocr-text ${ocr ? '' : 'empty'}">${ocr ? escapeHtml(ocr) : 'No text detected'}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Objects Detected</div>
+            <div class="tags ${objects.length ? '' : 'empty'}">
+              ${objects.length ? objects.map(o => `<span class="tag">${escapeHtml(o)}</span>`).join('') : 'None detected'}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
