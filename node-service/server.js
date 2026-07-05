@@ -4,7 +4,7 @@ const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
-const { Client } = require('@elastic/elasticsearch');
+const { Client } = require('@opensearch-project/opensearch');
 const cors = require('cors');
 
 const app = express();
@@ -23,17 +23,19 @@ const INDEX_NAME = 'media_files';
 async function setupIndex() {
   try {
     const exists = await esClient.indices.exists({ index: INDEX_NAME });
-    if (!exists) {
+    if (!exists.body) {
       await esClient.indices.create({
         index: INDEX_NAME,
-        mappings: {
-          properties: {
-            filename: { type: 'text' },
-            ocr_text: { type: 'text' },
-            objects_detected: { type: 'keyword' },
-            width: { type: 'integer' },
-            height: { type: 'integer' },
-            upload_date: { type: 'date' }
+        body: {
+          mappings: {
+            properties: {
+              filename: { type: 'text' },
+              ocr_text: { type: 'text' },
+              objects_detected: { type: 'keyword' },
+              width: { type: 'integer' },
+              height: { type: 'integer' },
+              upload_date: { type: 'date' }
+            }
           }
         }
       });
@@ -94,7 +96,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     const esResult = await esClient.index({
       index: INDEX_NAME,
-      document: {
+      body: {
         filename: metadata.filename,
         ocr_text: metadata.ocr_text,
         objects_detected: metadata.objects_detected,
@@ -104,7 +106,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       }
     });
 
-    res.json({ success: true, id: esResult._id, metadata });
+    res.json({ success: true, id: esResult.body._id, metadata });
 
   } catch (err) {
     console.error('Upload error:', err.message);
@@ -125,12 +127,14 @@ app.get('/search', async (req, res) => {
     const q = req.query.q || '';
     const results = await esClient.search({
       index: INDEX_NAME,
-      query: q
-        ? { multi_match: { query: q, fields: ['filename', 'ocr_text', 'objects_detected'] } }
-        : { match_all: {} }
+      body: {
+        query: q
+          ? { multi_match: { query: q, fields: ['filename', 'ocr_text', 'objects_detected'] } }
+          : { match_all: {} }
+      }
     });
 
-    const hits = results.hits.hits.map(h => ({ id: h._id, ...h._source }));
+    const hits = results.body.hits.hits.map(h => ({ id: h._id, ...h._source }));
     res.json(hits);
   } catch (err) {
     console.error('Search error:', err.message);
@@ -142,11 +146,13 @@ app.get('/files', async (req, res) => {
   try {
     const results = await esClient.search({
       index: INDEX_NAME,
-      size: 100,
-      query: { match_all: {} },
-      sort: [{ upload_date: 'desc' }]
+      body: {
+        size: 100,
+        query: { match_all: {} },
+        sort: [{ upload_date: 'desc' }]
+      }
     });
-    const hits = results.hits.hits.map(h => ({ id: h._id, ...h._source }));
+    const hits = results.body.hits.hits.map(h => ({ id: h._id, ...h._source }));
     res.json(hits);
   } catch (err) {
     console.error('List error:', err.message);
